@@ -43,6 +43,8 @@ Furthermore, we create a word_map which is an index mapping for each word in the
 
 Therefore, captions fed to the model must be an Int tensor of dimension N, L where L is the padded length.
   
+  ![image](https://user-images.githubusercontent.com/96676539/167215792-41bd4101-a7ae-44f6-b750-673277c61e28.png) 
+  
   
 ### Data pipeline
   
@@ -61,5 +63,26 @@ A JSON file which contains the word_map, the word-to-index dictionary.
 Before we save these files, we have the option to only use captions that are shorter than a threshold, and to bin less frequent words into an <unk> token.
 
 We use HDF5 files for the images because we will read them directly from disk during training / validation. They're simply too large to fit into RAM all at once. But we do load all captions and their lengths into memory.
+  
+## Beam Search
+  
+We use a linear layer to transform the Decoder's output into a score for each word in the vocabulary.
+
+The straightforward – and greedy – option would be to choose the word with the highest score and use it to predict the next word. But this is not optimal because the rest of the sequence hinges on that first word you choose. If that choice isn't the best, everything that follows is sub-optimal. And it's not just the first word – each word in the sequence has consequences for the ones that succeed it.
+
+It might very well happen that if you'd chosen the third best word at that first step, and the second best word at the second step, and so on... that would be the best sequence you could generate.
+
+It would be best if we could somehow not decide until we've finished decoding completely, and choose the sequence that has the highest overall score from a basket of candidate sequences.
+
+Beam Search does exactly this.
+
+At the first decode step, consider the top k candidates.
+Generate k second words for each of these k first words.
+Choose the top k [first word, second word] combinations considering additive scores.
+For each of these k second words, choose k third words, choose the top k [first word, second word, third word] combinations.
+Repeat at each decode step.
+After k sequences terminate, choose the sequence with the best overall score.
+
+![image](https://user-images.githubusercontent.com/96676539/167216170-53dae1a1-cf68-49a0-81d8-934136be6ffa.png)
 
 
